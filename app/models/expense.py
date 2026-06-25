@@ -11,7 +11,12 @@ class Expense(Base):
     description=Column(String)
     expense_date=Column(DATE, nullable=False)
     category_id= Column(Integer,ForeignKey("categories.id"),nullable=False)
+    user_id = Column(Integer,ForeignKey("users.id"),nullable=False)
     category = relationship(
         "Category",
+        back_populates="expenses"
+    )
+    user = relationship(
+        "User",
         back_populates="expenses"
     )

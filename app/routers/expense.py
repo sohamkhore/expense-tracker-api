@@ -1,12 +1,14 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from app.dependencies import get_db
+from app.auth.current_user import get_current_user
 from sqlalchemy import func
+from datetime import date
 
 from app.schemas.expense import ExpenseCreate, ExpenseResponse, ExpenseUpdate, ExpensePatch, ExpenseResponseTotal, ExpenseCategoryTotal
 from app.models.expense import Expense
-from datetime import date
 from app.models.category import Category
+from app.models.user import User
 
 router = APIRouter(
     prefix="/expenses",
@@ -15,9 +17,13 @@ router = APIRouter(
 
 ##------------------------------------------------------------------------------------------------------##
 @router.post("/add_expense", response_model= ExpenseResponse)
-def create_expense( expense: ExpenseCreate, db: Session = Depends(get_db)):
+def create_expense( 
+    expense: ExpenseCreate, 
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+    ):
 
-    category_check = db.query(Category).filter(Category.id == expense.category_id).first()
+    category_check = db.query(Category).filter(Category.id == expense.category_id, Category.user_id== current_user.id).first()
     if not category_check :
         raise HTTPException(
             status_code = 400,
@@ -35,7 +41,8 @@ def create_expense( expense: ExpenseCreate, db: Session = Depends(get_db)):
     amount=expense.amount,
     description=expense.description,
     expense_date=expense.expense_date,
-    category_id=expense.category_id
+    category_id=expense.category_id,
+    user_id = current_user.id
     )
 
     db.add(new_expense)
@@ -47,31 +54,25 @@ def create_expense( expense: ExpenseCreate, db: Session = Depends(get_db)):
 
 
 @router.get("/",response_model= list[ExpenseResponse])
-def get_all_expenses(db: Session = Depends(get_db)):
+def get_all_expenses(
+    db: Session = Depends(get_db),
+    current_user : User=Depends(get_current_user)
+    ):
     
-    all_expenses = db.query(Expense).all()
+    all_expenses = db.query(Expense).filter(Expense.user_id== current_user.id).all()
 
     return all_expenses
 ##------------------------------------------------------------------------------------------------------##
 
 
-@router.get("/{expense_id}", response_model= ExpenseResponse)
-def get_expense_by_id( expense_id : int, db: Session = Depends(get_db)):
-
-    existing = db.query(Expense).filter(expense_id == Expense.id).first()
-    if not existing:
-        raise HTTPException(
-            status_code = 400,
-            detail = "Expense not found"
-        )
-    return existing
-##------------------------------------------------------------------------------------------------------##
-
-
 @router.delete("/delete/{expense_id}")
-def delete_expense_by_id(expense_id : int , db: Session = Depends(get_db)):
+def delete_expense_by_id(
+    expense_id : int, 
+    db: Session = Depends(get_db), 
+    current_user : User=Depends(get_current_user)
+    ):
 
-    find_expense=db.query(Expense).filter(Expense.id == expense_id).first()
+    find_expense=db.query(Expense).filter(Expense.id == expense_id, current_user.id == Expense.user_id).first()
 
     if not find_expense:
         raise HTTPException(
@@ -89,10 +90,15 @@ def delete_expense_by_id(expense_id : int , db: Session = Depends(get_db)):
 
 
 @router.put("/update_record/{expense_id}", response_model= ExpenseResponse)
-def update_expense_full(updated_expense : ExpenseUpdate, expense_id: int, db: Session = Depends(get_db)):
+def update_expense_full(
+    updated_expense : ExpenseUpdate, 
+    expense_id: int, 
+    db: Session = Depends(get_db),
+    current_user : User=Depends(get_current_user)
+    ):
 
-    category_exists = (db.query(Category).filter(Category.id == updated_expense.category_id).first())
-    expense_record = db.query(Expense).filter(Expense.id == expense_id).first()
+    category_exists = (db.query(Category).filter(Category.id == updated_expense.category_id, Category.user_id == current_user.id).first())
+    expense_record = db.query(Expense).filter(Expense.id == expense_id, Expense.user_id == current_user.id).first()
     if not expense_record:
         raise HTTPException(status_code=404, detail="Expense not found")
 
@@ -117,9 +123,14 @@ def update_expense_full(updated_expense : ExpenseUpdate, expense_id: int, db: Se
 
 
 @router.patch("/update_record_something/{expense_id}", response_model=ExpenseResponse)
-def update_expense_something(update_expense: ExpensePatch, expense_id: int, db: Session = Depends(get_db)):
+def update_expense_something(
+    update_expense: ExpensePatch,
+    expense_id: int, 
+    db: Session = Depends(get_db),
+    current_user : User=Depends(get_current_user)
+    ):
 
-    expense_exists = (db.query(Expense).filter(Expense.id == expense_id).first())
+    expense_exists = (db.query(Expense).filter(Expense.id == expense_id, Expense.user_id==current_user.id).first())
     if not expense_exists:
         raise HTTPException(
             status_code=404,
@@ -131,7 +142,7 @@ def update_expense_something(update_expense: ExpensePatch, expense_id: int, db: 
     # Validate category only if user is updating category_id
     if "category_id" in update_data:
         category_exists = (
-            db.query(Category).filter(Category.id == update_data["category_id"]).first())
+            db.query(Category).filter(Category.id == update_data["category_id"], Category.user_id == current_user.id).first())
 
         if not category_exists:
             raise HTTPException(
@@ -151,24 +162,32 @@ def update_expense_something(update_expense: ExpensePatch, expense_id: int, db: 
 
 
 @router.get("/get_expense_by_category/{category_id}",response_model= list[ExpenseResponse])
-def get_expense_by_category(category_id : int, db: Session = Depends(get_db)):
+def get_expense_by_category(
+    category_id : int, 
+    db: Session = Depends(get_db),
+    current_user : User=Depends(get_current_user)
+    ):
 
-    category_exists = db.query(Category).filter(Category.id == category_id).first()
+    category_exists = db.query(Category).filter(Category.id == category_id, Category.user_id == current_user.id).first()
     if not category_exists :
         raise HTTPException(
             status_code = 400,
             detail = "Category not found"
         )
     
-    all_expenses = db.query(Expense).filter(Expense.category_id == category_id).all()
+    all_expenses = db.query(Expense).filter(Expense.category_id == category_id, Expense.user_id == current_user.id).all()
 
     return all_expenses
 ##------------------------------------------------------------------------------------------------------##
 
 
 @router.get("/expense_by_date/{date}", response_model=list[ExpenseResponse])
-def get_expenses_by_date(date1: date, db:Session = Depends(get_db)):
-    expense_exist = db.query(Expense).filter(Expense.expense_date==date1).all()
+def get_expenses_by_date(
+    date: date, 
+    db:Session = Depends(get_db),
+    current_user : User=Depends(get_current_user)
+    ):
+    expense_exist = db.query(Expense).filter(Expense.expense_date==date, Expense.user_id == current_user.id).all()
 
     if not expense_exist:
         raise HTTPException(
@@ -180,9 +199,13 @@ def get_expenses_by_date(date1: date, db:Session = Depends(get_db)):
 
 
 @router.get("/total_expense_ofdate/{expense_date}", response_model=ExpenseResponseTotal)
-def get_total_expenseoftheday(expense_date: date, db:Session = Depends(get_db)):
+def get_total_expenseoftheday(
+    expense_date: date, 
+    db:Session = Depends(get_db),
+    current_user : User=Depends(get_current_user)
+    ):
 
-    total_expense = db.query(func.sum(Expense.amount)).filter(Expense.expense_date == expense_date).scalar()
+    total_expense = db.query(func.sum(Expense.amount)).filter(Expense.expense_date == expense_date, Expense.user_id == current_user.id).scalar()
     if total_expense is None:
         raise HTTPException(
             status_code=400,
@@ -198,16 +221,20 @@ def get_total_expenseoftheday(expense_date: date, db:Session = Depends(get_db)):
 
 
 @router.get("/category_expense/{category_id}",response_model=ExpenseCategoryTotal)
-def category_expense_total(category_id: int, db:Session = Depends(get_db)):
+def category_expense_total(
+    category_id: int, 
+    db:Session = Depends(get_db),
+    current_user : User=Depends(get_current_user)
+    ):
 
-    exists = db.query(Category).filter(Category.id == category_id).first()
+    exists = db.query(Category).filter(Category.id == category_id,Category.user_id == current_user.id).first()
     if not exists:
         raise HTTPException(
             status_code= 400,
             detail = "Category doesnt exists"
         )
     
-    total_expense = db.query(func.sum(Expense.amount)).filter(Expense.category_id == category_id).scalar()
+    total_expense = db.query(func.sum(Expense.amount)).filter(Expense.category_id == category_id, Expense.user_id == current_user.id).scalar()
     if total_expense is None:
         total_expense = 0.0
 
@@ -216,3 +243,22 @@ def category_expense_total(category_id: int, db:Session = Depends(get_db)):
         "title": exists.name,
         "total": float(total_expense)
     }
+##------------------------------------------------------------------------------------------------------##
+
+
+@router.get("/{expense_id}", response_model= ExpenseResponse)
+def get_expense_by_id( 
+    expense_id : int, 
+    db: Session = Depends(get_db), 
+    current_user : User=Depends(get_current_user)
+    ):
+
+    existing = db.query(Expense).filter(expense_id == Expense.id, current_user.id == Expense.user_id).first()
+    if not existing:
+        raise HTTPException(
+            status_code = 400,
+            detail = "Expense not found"
+        )
+    return existing
+
+

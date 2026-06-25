@@ -1,12 +1,19 @@
 # Virtual Environment
 venv/
+.venv/
 
 # Environment Variables
 .env
 
 # Python Cache
 __pycache__/
-*.pyc
+*.py[cod]
+*$py.class
+
+# Distribution / Packaging
+build/
+dist/
+*.egg-info/
 
 # IDE Files
 .vscode/
@@ -14,3 +21,20 @@ __pycache__/
 
 # OS Files
 .DS_Store
+Thumbs.db
+
+# Pytest
+.pytest_cache/
+
+# Mypy
+.mypy_cache/
+
+# Coverage Reports
+.coverage
+htmlcov/
+
+# Alembic
+alembic/__pycache__/
+
+# Logs
+*.log

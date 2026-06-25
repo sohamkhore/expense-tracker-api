@@ -1,31 +1,86 @@
 # Expense Tracker API
 
-A production-style backend project built while learning modern backend development using FastAPI, PostgreSQL, and SQLAlchemy.
+A production-style backend project built using FastAPI, PostgreSQL, SQLAlchemy, JWT Authentication, and Alembic.
 
-Instead of creating multiple small projects, this project is continuously improved through multiple versions, with each version introducing new backend concepts and technologies.
+The project is being developed incrementally through multiple versions, with each version introducing new backend engineering concepts and real-world development practices.
+
+Current Version: **V2 – Authentication & Ownership**
 
 ---
 
-## Tech Stack
+# Tech Stack
+
+### Backend
 
 * FastAPI
+* Python 3.11
+
+### Database
+
 * PostgreSQL
-* SQLAlchemy ORM
+
+### ORM
+
+* SQLAlchemy
+
+### Authentication
+
+* JWT (JSON Web Tokens)
+* Passlib (BCrypt)
+
+### Database Migrations
+
+* Alembic
+
+### Validation
+
 * Pydantic
+
+### Server
+
 * Uvicorn
 
 ---
 
-## Features Implemented (V1)
+# Features Implemented
 
-### Category Management
+## User Authentication
+
+* User Registration
+* User Login
+* Password Hashing using BCrypt
+* JWT Access Token Generation
+* JWT Verification
+* Protected Routes
+* Current User Endpoint (`/auth/me`)
+
+---
+
+## Authorization & Ownership
+
+Every resource belongs to a specific user.
+
+Implemented ownership checks to ensure:
+
+* Users can only view their own expenses
+* Users can only modify their own expenses
+* Users can only delete their own expenses
+* Users can only access their own categories
+* Cross-user data access is prevented
+
+---
+
+## Category Management
 
 * Create Category
 * Get All Categories
 * Get Category By ID
+* Update Category
 * Delete Category
 
-### Expense Management
+---
+
+## Expense Management
 
 * Create Expense
 * Get All Expenses
@@ -34,48 +89,96 @@ Instead of creating multiple small projects, this project is continuously improv
 * Partial Update Expense (PATCH)
 * Delete Expense
 
+---
+
+## Filtering & Analytics
+
 ### Filtering
 
 * Get Expenses By Category
 * Get Expenses By Date
 
-### Summary APIs
+### Analytics
 
-* Get Total Expense For A Specific Date
-* Get Total Expense For A Specific Category
-
-### Database Concepts Used
-
-* One-to-Many Relationships
-* Foreign Keys
-* SQLAlchemy ORM
-* Dependency Injection
-* PostgreSQL Integration
+* Total Expense By Date
+* Total Expense By Category
 
 ---
 
-## Project Structure
+# Database Concepts Used
+
+* One-to-Many Relationships
+* Foreign Keys
+* Ownership-based Data Isolation
+* SQLAlchemy ORM
+* Dependency Injection
+* PostgreSQL Integration
+* Alembic Database Migrations
+
+---
+
+# Security Features
+
+### Password Security
+
+Passwords are never stored in plain text.
+
+* BCrypt Hashing
+* Secure Password Verification
+
+### JWT Authentication
+
+Authenticated users receive a signed access token.
+
+Protected endpoints require:
+
+```text
+Authorization: Bearer <access_token>
+```
+
+### Resource Ownership
+
+Every category and expense is linked to a specific user.
+
+This prevents unauthorized access to another user's data.
+
+---
+
+# Project Structure
 
 ```text
 Expense_Tracker/
 │
+├── alembic/
+│
 ├── app/
-│   ├── main.py
-│   ├── database.py
-│   ├── dependencies.py
+│
+│   ├── auth/
+│   │   ├── hashing.py
+│   │   ├── jwt_handler.py
+│   │   ├── oauth2.py
+│   │   └── current_user.py
 │   │
 │   ├── models/
+│   │   ├── user.py
 │   │   ├── category.py
 │   │   └── expense.py
 │   │
 │   ├── schemas/
+│   │   ├── user.py
 │   │   ├── category.py
 │   │   └── expense.py
 │   │
-│   └── routers/
-│       ├── category.py
-│       └── expense.py
+│   ├── routers/
+│   │   ├── auth.py
+│   │   ├── category.py
+│   │   └── expense.py
+│   │
+│   ├── database.py
+│   ├── dependencies.py
+│   └── main.py
 │
+├── alembic.ini
 ├── requirements.txt
 ├── .gitignore
 └── README.md
@@ -83,18 +186,31 @@ Expense_Tracker/
 
 ---
 
-## API Endpoints
+# API Endpoints
 
-### Category APIs
+## Authentication
 
-| Method | Endpoint         |
-| ------ | ---------------- |
-| POST   | /categories      |
-| GET    | /categories      |
-| GET    | /categories/{id} |
-| DELETE | /categories/{id} |
+| Method | Endpoint       |
+| ------ | -------------- |
+| POST   | /auth/register |
+| POST   | /auth/login    |
+| GET    | /auth/me       |
 
-### Expense APIs
+---
+
+## Categories
+
+| Method | Endpoint                         |
+| ------ | -------------------------------- |
+| POST   | /categories                      |
+| GET    | /categories                      |
+| GET    | /categories/{id}                 |
+| PUT    | /categories/update_category/{id} |
+| DELETE | /categories/{id}                 |
+
+---
+
+## Expenses
 
 | Method | Endpoint                                       |
 | ------ | ---------------------------------------------- |
@@ -105,38 +221,35 @@ Expense_Tracker/
 | PATCH  | /expenses/update_record_something/{expense_id} |
 | DELETE | /expenses/delete/{expense_id}                  |
 
-### Filter APIs
+---
+
+## Analytics
 
 | Method | Endpoint                                        |
 | ------ | ----------------------------------------------- |
 | GET    | /expenses/get_expense_by_category/{category_id} |
 | GET    | /expenses/expense_by_date/{date}                |
-
-### Summary APIs
-
-| Method | Endpoint                                      |
-| ------ | --------------------------------------------- |
-| GET    | /expenses/total_expense_ofdate/{expense_date} |
-| GET    | /expenses/category_expense/{category_id}      |
+| GET    | /expenses/total_expense_ofdate/{expense_date}   |
+| GET    | /expenses/category_expense/{category_id}        |
 
 ---
 
-## Running Locally
+# Running Locally
 
-### Clone Repository
+## Clone Repository
 
 ```bash
 git clone https://github.com/sohamkhore/expense-tracker-api.git
 cd expense-tracker-api
 ```
 
-### Create Virtual Environment
+## Create Virtual Environment
 
 ```bash
 python -m venv venv
 ```
 
-### Activate Environment
+## Activate Environment
 
 Windows:
 
@@ -144,27 +257,39 @@ Windows:
 venv\Scripts\activate
 ```
 
-### Install Dependencies
+## Install Dependencies
 
 ```bash
 pip install -r requirements.txt
 ```
 
-### Configure Environment Variables
+## Configure Environment Variables
 
 Create a `.env` file:
 
 ```env
-postgre_URL=YOUR_DATABASE_URL
+DATABASE_URL=postgresql://username:password@localhost:5432/ExpenseTracker
+
+SECRET_KEY=your_secret_key
+ALGORITHM=HS256
+ACCESS_TOKEN_EXPIRE_MINUTES=30
 ```
 
-### Start Server
+## Run Migrations
+
+```bash
+alembic upgrade head
+```
+
+## Start Server
 
 ```bash
 uvicorn app.main:app --reload
 ```
 
-### Swagger Documentation
+---
+
+# Swagger Documentation
 
 ```text
 http://127.0.0.1:8000/docs
@@ -172,53 +297,75 @@ http://127.0.0.1:8000/docs
 
 ---
 
-## Version Roadmap
+# Version Roadmap
 
-### V1 (Current)
+## V1 – Core Expense Tracking
 
 * PostgreSQL
 * SQLAlchemy ORM
-* Relationships
 * CRUD APIs
+* Relationships
 * Filtering
 * Aggregations
 
-### V2
+## V2 – Authentication & Ownership ✅
 
-* JWT Authentication
 * User Accounts
+* JWT Authentication
 * Password Hashing
+* Protected Routes
+* Resource Ownership
 * Alembic Migrations
 
-### V3
+## V3 – Containerization & Deployment
 
 * Docker
-* Deployment
+* Docker Compose
+* Environment Configuration
+* Production Deployment
 
-### V4
+## V4 – Performance & Scalability
 
 * Redis
 * Caching
 * Rate Limiting
 
-### V5
+## V5 – Backend Automation
 
 * Background Jobs
-* Monthly Report Generation
+* Scheduled Reports
+* Email Notifications
 
-### Future AI Project
+## V6 – Advanced Backend Patterns
+
+* Service Layer
+* Repository Pattern
+* Logging
+* Monitoring
+* Testing
+* Pagination
+
+---
+
+# Future AI Engineering Roadmap
+
+After completing the backend roadmap, the next focus will be AI engineering projects:
 
 * Resume Analyzer
 * RAG Assistant
+* Embeddings
 * Vector Databases
 * LangGraph
 * Evaluation & Monitoring
 
+The objective is to transition from backend development into AI engineering while leveraging backend concepts learned through this project.
+
 ---
 
-## Author
+# Author
 
-Soham Khore
+**Soham Khore**
 
 B.Tech Computer Science Engineering
-Backend Development & AI Engineering Learning Journey
+
+Backend Development • FastAPI • PostgreSQL • AI Engineering Journey
